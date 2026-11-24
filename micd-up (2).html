@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mic’d Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --fg: #ffffff;
+    --dim: #8c8c8c;
+    --line: #ffffff;
+    --font: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+    --pad: clamp(1.25rem, 4vw, 3rem);
+    color-scheme: dark;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#000; --fg:#fff; --dim:#8c8c8c; } }
+  :root[data-theme="dark"] { --bg:#000; --fg:#fff; --dim:#8c8c8c; }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font); font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input { font: inherit; color: inherit; }
+  button, a.btn {
+    background: transparent; border: 1px solid var(--line); border-radius: 999px;
+    padding: .8rem 1.8rem; cursor: pointer; font-weight: 500;
+    font-size: clamp(1rem, 1.4vw, 1.15rem); color: var(--fg); text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  button:hover, a.btn:hover { background: var(--fg); color: var(--bg); }
+  button:disabled { opacity: .3; cursor: default; }
+  button:disabled:hover { background: transparent; color: var(--fg); }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+  .page { display: none; min-height: 100%; padding: var(--pad); }
+  .page.active { display: flex; flex-direction: column; }
+  .wrap { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 90rem; margin: 0 auto; }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .back, .bar .small {
+    border: none; padding: .4rem 0; color: var(--dim); font-weight: 300; align-self: flex-start;
+  }
+  .back:hover, .bar .small:hover { background: none; color: var(--fg); }
+  h2 {
+    font-weight: 500; font-size: clamp(2.2rem, 6vw, 5rem); letter-spacing: -.03em; line-height: 1;
+    margin: auto 0 clamp(1.5rem, 5vh, 3.5rem);
+  }
+  #rules h2, #list h2 { margin-top: clamp(1.5rem, 6vh, 4rem); }
+  .push { margin-top: auto; width: 100%; padding: 1.15rem; font-size: clamp(1.05rem, 1.8vw, 1.3rem); }
+
+  /* Title */
+  #title { align-items: center; justify-content: center; text-align: center; gap: clamp(1.5rem, 5vh, 3.5rem); }
+  .logo {
+    font-weight: 800; font-size: min(30vw, 34vh); line-height: .82; letter-spacing: -.05em; margin: 0;
+    color: transparent; -webkit-text-stroke: max(1.5px, .14vw) var(--fg);
+  }
+  .logo span { display: block; }
+  .tag { margin: 0; color: var(--dim); font-size: clamp(1.1rem, 2.4vw, 1.75rem); }
+  #startBtn { width: min(100%, 22rem); padding: 1.15rem 2rem; font-size: clamp(1.05rem, 1.8vw, 1.3rem); }
+
+  /* Teams */
+  .stepper { display: flex; align-items: center; gap: clamp(1rem, 4vw, 3rem); margin-bottom: clamp(1.5rem, 6vh, 3.5rem); }
+  .stepper button { width: clamp(3rem, 7vw, 4.5rem); height: clamp(3rem, 7vw, 4.5rem); padding: 0; font-size: 1.6rem; line-height: 1; }
+  .count { font-size: clamp(4.5rem, 15vw, 10rem); font-weight: 800; line-height: .9; min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
+  .names { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 2.5rem; margin-bottom: 2.5rem; }
+  .names input, .addrow input {
+    min-width: 0; background: transparent; border: none; border-bottom: 1px solid var(--line);
+    border-radius: 0; padding: .6rem 0; font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  }
+  .names input:focus-visible, .addrow input:focus-visible { outline: none; border-bottom-width: 2px; }
+  .addrow input::placeholder { color: var(--dim); }
+
+  /* Rules */
+  .rules ol, .rules ul { max-width: 62ch; margin: 0 0 2.5rem; padding-left: 1.6rem; line-height: 1.55; font-size: clamp(1.05rem, 1.7vw, 1.35rem); }
+  .rules li { margin-bottom: .9rem; padding-left: .3rem; }
+  .rules ol li::marker { font-weight: 800; }
+  .rules ul li::marker { color: var(--dim); }
+  .rules h3 { font-weight: 500; font-size: clamp(1.3rem, 2.4vw, 1.9rem); margin: 0 0 1rem; }
+
+  /* Song */
+  .songcard { margin-bottom: clamp(1.5rem, 5vh, 3rem); }
+  .stitle { font-weight: 800; font-size: clamp(2.6rem, 9vw, 8rem); line-height: .92; letter-spacing: -.04em; overflow-wrap: break-word; }
+  .sartist { color: var(--dim); margin-top: .8rem; font-size: clamp(1.15rem, 2.6vw, 2rem); }
+  .clipnote { color: var(--dim); font-size: clamp(.9rem, 1.3vw, 1.05rem); margin-top: 1.25rem; }
+  .clipnote:empty { display: none; }
+  .clipnote a { color: var(--fg); }
+  .songrow { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 2rem; }
+
+  /* Your songs */
+  .addrow { display: grid; grid-template-columns: 2fr 1.5fr auto; gap: 1rem 1.5rem; align-items: end; margin-bottom: 2rem; }
+  .seg { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+  .seg button { padding: .55rem 1.2rem; font-weight: 300; border-color: var(--dim); color: var(--dim); }
+  .seg button[aria-checked="true"] { border-color: var(--fg); color: var(--fg); font-weight: 500; }
+  .seg button:hover { background: none; color: var(--fg); border-color: var(--fg); }
+  .mylist { list-style: none; margin: 0; padding: 0; }
+  .mylist li {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: .85rem 0; border-bottom: 1px solid var(--dim); font-size: clamp(1rem, 1.6vw, 1.25rem);
+  }
+  .mylist li.empty { color: var(--dim); border-bottom: none; }
+  .mylist .rm { padding: .35rem .9rem; font-size: .85rem; font-weight: 300; flex-shrink: 0; }
+
+  /* Studio */
+  .nowrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.25rem; margin: clamp(1rem, 3vh, 2rem) 0 1rem; }
+  .now { margin: 0; color: var(--dim); font-size: clamp(1rem, 1.8vw, 1.35rem); }
+  .nowrow .clipbtn { padding: .55rem 1.3rem; font-size: clamp(.95rem, 1.3vw, 1.05rem); }
+  .studionote { margin: -.25rem 0 1rem; }
+  .recopts { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.25rem; margin-bottom: .5rem; }
+  .hint { margin: 0; font-size: clamp(.95rem, 1.5vw, 1.15rem); max-width: 60ch; line-height: 1.4; }
+  .hint.dimmer { color: var(--dim); font-size: clamp(.85rem, 1.3vw, 1rem); margin: 0 0 1rem; }
+  .hint.dimmer:empty { display: none; }
+  .toggle { padding: .5rem 1.2rem; font-weight: 300; font-size: clamp(.9rem, 1.3vw, 1rem); }
+  .toggle[aria-pressed="false"] { border-color: var(--dim); color: var(--dim); }
+  .tabs { display: flex; gap: .5rem; overflow-x: auto; padding: 3px; margin: 0 -3px 1.25rem; }
+  .tabs button { white-space: nowrap; padding: .5rem 1.2rem; font-weight: 300; border-color: var(--dim); color: var(--dim); }
+  .tabs button[aria-selected="true"] { border-color: var(--fg); color: var(--fg); font-weight: 500; }
+  .tabs button:hover { background: none; color: var(--fg); border-color: var(--fg); }
+  .err { border: 1px dashed var(--fg); border-radius: 1rem; padding: .8rem 1rem; margin-bottom: 1.25rem; display: none; }
+  .grid {
+    flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(12rem, 1fr);
+    gap: clamp(.75rem, 1.5vw, 1.25rem); margin-bottom: 1.25rem;
+  }
+  @media (min-width: 960px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .slot {
+    border: 1px solid var(--line); border-radius: 1.5rem; padding: clamp(1rem, 2vw, 1.5rem);
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 1rem;
+  }
+  .slot h3 { margin: 0; font-weight: 500; font-size: clamp(1.05rem, 2vw, 1.5rem); align-self: flex-start; }
+  .rec { position: relative; width: clamp(5rem, 12vw, 8.5rem); height: auto; aspect-ratio: 1; border-radius: 50%; padding: 0; display: grid; place-items: center; }
+  .rec .dot { width: clamp(1.3rem, 3.2vw, 2.2rem); height: clamp(1.3rem, 3.2vw, 2.2rem); border-radius: 50%; border: 1.5px solid currentColor; }
+  .rec.on .dot { border-radius: 12%; background: currentColor; }
+  .rec .ring { position: absolute; inset: -1px; border-radius: 50%; border: 1px solid var(--fg); transform: scale(1); pointer-events: none; opacity: 0; }
+  .rec.on .ring { opacity: 1; }
+  .status { text-align: center; color: var(--dim); font-size: clamp(.9rem, 1.3vw, 1.05rem); min-height: 1.2em; font-variant-numeric: tabular-nums; }
+  .slot .row { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+  .slot .row button { padding: .45rem .95rem; font-size: .9rem; font-weight: 300; }
+  .mix { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  #playAll { padding: 1.15rem 2.2rem; font-size: clamp(1.05rem, 1.8vw, 1.3rem); }
+  .note, .mix .note { color: var(--dim); font-size: clamp(.9rem, 1.3vw, 1.05rem); margin: 0; }
+
+  @media (max-width: 640px) { .addrow { grid-template-columns: 1fr; } .addrow button { justify-self: start; } }
+  @media (max-width: 640px) { .grid { grid-auto-rows: minmax(10rem, 1fr); } .slot .row button { padding: .4rem .8rem; } }
+  @media (max-width: 360px) { .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .rec .ring { transition: none; } }
+</style>
+</head>
+<body>
+
+<!-- Title -->
+<section class="page active" id="title" aria-label="Title">
+  <h1 class="logo"><span>Mic’d</span><span>Up</span></h1>
+  <p class="tag">You are the instrument</p>
+  <button id="startBtn">Start</button>
+</section>
+
+<!-- Teams -->
+<section class="page" id="teams" aria-label="Pick teams">
+  <div class="wrap">
+    <div class="bar">
+      <button class="back" data-go="title">Back</button>
+      <button class="small" data-go="rules">Rules</button>
+    </div>
+    <h2>How many teams?</h2>
+    <div class="stepper">
+      <button id="minus" aria-label="Fewer teams">−</button>
+      <div class="count" id="count" aria-live="polite">2</div>
+      <button id="plus" aria-label="More teams">+</button>
+    </div>
+    <div class="names" id="names"></div>
+    <button class="push" id="toStudio">Pick a song</button>
+  </div>
+</section>
+
+<!-- Rules -->
+<section class="page" id="rules" aria-label="Rules">
+  <div class="wrap rules">
+    <button class="back" data-go="teams">Back to teams</button>
+    <h2>Rules</h2>
+    <ol>
+      <li>Play with at least 3 people. Before the game starts, split into two or more teams and choose one or more judges.</li>
+      <li>The app or the judge picks a random song and plays it for the teams to recreate. A Spotify playlist on shuffle works too.</li>
+      <li>Each team goes into a separate room to record.</li>
+      <li>More people means more a cappella and a fuller, more complex version of the song. Teams of more than one should divide up the parts (beat, bass, singing and so on) or work together on vocal chords and more complex drum parts.</li>
+      <li>Each team records each layer of the song, or just sings a section of it, until the song is complete or the time limit runs out.</li>
+      <li>The judge chooses which team replicated the song better or made the more interesting cover.</li>
+    </ol>
+    <h3>Alternate rules</h3>
+    <ul>
+      <li>Spotify or the teams pick a random song, and teams recreate it with the goal of getting the judge to recognize it.</li>
+      <li>Play as one team trying to get the judge to recognize the song. This removes the competition and puts the focus on working together.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Song -->
+<section class="page" id="song" aria-label="Pick a song">
+  <div class="wrap">
+    <button class="back" data-go="teams">Back to teams</button>
+    <h2>Your song</h2>
+    <div class="songcard" aria-live="polite">
+      <div class="stitle" id="songTitle"></div>
+      <div class="sartist" id="songArtist"></div>
+      <div class="clipnote" id="clipNote" aria-live="polite"></div>
+    </div>
+    <div class="songrow">
+      <button id="clipBtn" class="clipbtn">Play 10 seconds</button>
+      <button id="reroll">Pick another</button>
+      <a class="btn" id="spotify" href="https://open.spotify.com" target="_blank" rel="noopener">Open in Spotify</a>
+      <button id="openList">Add songs</button>
+    </div>
+    <button class="push" id="toRecord">Start recording</button>
+  </div>
+</section>
+
+<!-- Your songs -->
+<section class="page" id="list" aria-label="Your songs">
+  <div class="wrap">
+    <button class="back" id="listBack">Back to song</button>
+    <h2>Your songs</h2>
+    <div class="addrow">
+      <input id="addTitle" placeholder="Song title" aria-label="Song title" maxlength="80">
+      <input id="addArtist" placeholder="Artist (optional)" aria-label="Artist" maxlength="60">
+      <button id="addBtn">Add song</button>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="Pick songs from">
+      <button role="radio" id="modeAll" aria-checked="true">All songs</button>
+      <button role="radio" id="modeMine" aria-checked="false">My songs only</button>
+    </div>
+    <ul class="mylist" id="mylist"></ul>
+  </div>
+</section>
+
+<!-- Studio -->
+<section class="page" id="studio" aria-label="Record layers">
+  <div class="wrap">
+    <div class="bar">
+      <button class="back" data-go="teams">Teams</button>
+      <button class="small" data-go="song">Change song</button>
+    </div>
+    <div class="nowrow">
+      <p class="now" id="now"></p>
+      <button id="clipBtn2" class="clipbtn">Play 10 seconds</button>
+    </div>
+    <div class="clipnote studionote" id="clipNote2" aria-live="polite"></div>
+    <div class="recopts">
+      <p class="hint">Each layer records for exactly 10 seconds after a 3-second count-in. Keep going until it stops on its own.</p>
+      <button id="bgToggle" class="toggle" aria-pressed="true">Clip while recording: On</button>
+    </div>
+    <p class="hint dimmer" id="bgHint">Wear headphones so the clip doesn’t end up in your recording.</p>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="err" id="err" role="alert"></div>
+    <div class="grid" id="grid"></div>
+    <div class="mix">
+      <button id="playAll">Play all layers</button>
+      <span class="note" id="mixNote">Record a layer to play the mix</span>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const LAYERS = ["Bass", "Highs", "Instrumentals", "Vocals"];
+  const MAX_TEAMS = 4, MIN_TEAMS = 2;
+  let teamCount = 2;
+  let names = ["Team 1", "Team 2", "Team 3", "Team 4"];
+  let teams = [];        // [{name, slots:[{url, secs}|null x4]}]
+  let current = 0;
+
+  let stream = null, recorder = null, recSlot = -1, chunks = [], recStart = 0, timer = null;
+  let audioCtx = null, analyser = null, raf = null;
+  let playing = [];      // Audio elements currently playing
+
+  const $ = id => document.getElementById(id);
+
+  function show(id) {
+    stopAllAudio();
+    document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === id));
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
+    if (recSlot !== -1) { stopRecording(); showErr(""); }
+    show(b.dataset.go);
+  }));
+
+  /* ---------- Teams page ---------- */
+  function renderNames() {
+    $("count").textContent = teamCount;
+    $("minus").disabled = teamCount <= MIN_TEAMS;
+    $("plus").disabled = teamCount >= MAX_TEAMS;
+    const box = $("names");
+    box.innerHTML = "";
+    for (let i = 0; i < teamCount; i++) {
+      const inp = document.createElement("input");
+      inp.value = names[i];
+      inp.setAttribute("aria-label", "Team " + (i + 1) + " name");
+      inp.maxLength = 24;
+      inp.addEventListener("input", () => { names[i] = inp.value; });
+      box.appendChild(inp);
+    }
+  }
+  $("startBtn").addEventListener("click", () => { renderNames(); show("teams"); });
+  $("minus").addEventListener("click", () => { if (teamCount > MIN_TEAMS) { teamCount--; renderNames(); } });
+  $("plus").addEventListener("click", () => { if (teamCount < MAX_TEAMS) { teamCount++; renderNames(); } });
+
+  $("toStudio").addEventListener("click", () => {
+    // keep existing recordings for teams that still exist
+    const next = [];
+    for (let i = 0; i < teamCount; i++) {
+      const name = (names[i] || "").trim() || ("Team " + (i + 1));
+      next.push({ name, slots: teams[i] ? teams[i].slots : [null, null, null, null] });
+    }
+    teams.slice(teamCount).forEach(t => t.slots.forEach(s => s && URL.revokeObjectURL(s.url)));
+    teams = next;
+    if (current >= teams.length) current = 0;
+    if (!song) pickSong();
+    show("song");
+  });
+
+  /* ---------- Song picker ---------- */
+  const SONGS = [
+    // 1950s–60s
+    ["Rock Around the Clock","Bill Haley & His Comets"],["Hound Dog","Elvis Presley"],["Jailhouse Rock","Elvis Presley"],["Can’t Help Falling in Love","Elvis Presley"],
+    ["Johnny B. Goode","Chuck Berry"],["Great Balls of Fire","Jerry Lee Lewis"],["La Bamba","Ritchie Valens"],["Stand by Me","Ben E. King"],
+    ["The Twist","Chubby Checker"],["Oh, Pretty Woman","Roy Orbison"],["Be My Baby","The Ronettes"],["Unchained Melody","The Righteous Brothers"],
+    ["You’ve Lost That Lovin’ Feelin’","The Righteous Brothers"],["I Want to Hold Your Hand","The Beatles"],["Twist and Shout","The Beatles"],["Yesterday","The Beatles"],
+    ["Hey Jude","The Beatles"],["Come Together","The Beatles"],["Let It Be","The Beatles"],["(I Can’t Get No) Satisfaction","The Rolling Stones"],
+    ["Paint It Black","The Rolling Stones"],["My Girl","The Temptations"],["Ain’t No Mountain High Enough","Marvin Gaye & Tammi Terrell"],["I Heard It Through the Grapevine","Marvin Gaye"],
+    ["Respect","Aretha Franklin"],["Good Vibrations","The Beach Boys"],["Surfin’ U.S.A.","The Beach Boys"],["Stop! In the Name of Love","The Supremes"],
+    ["The Sound of Silence","Simon & Garfunkel"],["Mrs. Robinson","Simon & Garfunkel"],["I Got You (I Feel Good)","James Brown"],["Dancing in the Street","Martha and the Vandellas"],
+    ["(Sittin’ On) The Dock of the Bay","Otis Redding"],["Brown Eyed Girl","Van Morrison"],["Light My Fire","The Doors"],["Born to Be Wild","Steppenwolf"],
+    ["Proud Mary","Creedence Clearwater Revival"],["Happy Together","The Turtles"],["California Dreamin’","The Mamas & the Papas"],["Sugar, Sugar","The Archies"],
+    // 1970s
+    ["Bridge Over Troubled Water","Simon & Garfunkel"],["ABC","The Jackson 5"],["I Want You Back","The Jackson 5"],["American Pie","Don McLean"],
+    ["Lean on Me","Bill Withers"],["Ain’t No Sunshine","Bill Withers"],["Lovely Day","Bill Withers"],["Superstition","Stevie Wonder"],
+    ["Sir Duke","Stevie Wonder"],["Isn’t She Lovely","Stevie Wonder"],["Let’s Stay Together","Al Green"],["Killing Me Softly with His Song","Roberta Flack"],
+    ["Crocodile Rock","Elton John"],["Bennie and the Jets","Elton John"],["Tiny Dancer","Elton John"],["Rocket Man","Elton John"],
+    ["Don’t Go Breaking My Heart","Elton John & Kiki Dee"],["Piano Man","Billy Joel"],["Dancing Queen","ABBA"],["Mamma Mia","ABBA"],
+    ["Waterloo","ABBA"],["Stayin’ Alive","Bee Gees"],["Night Fever","Bee Gees"],["How Deep Is Your Love","Bee Gees"],
+    ["Le Freak","Chic"],["Good Times","Chic"],["I Will Survive","Gloria Gaynor"],["Hot Stuff","Donna Summer"],
+    ["Y.M.C.A.","Village People"],["September","Earth, Wind & Fire"],["Boogie Wonderland","Earth, Wind & Fire"],["Love Train","The O’Jays"],
+    ["Bohemian Rhapsody","Queen"],["We Will Rock You","Queen"],["We Are the Champions","Queen"],["Don’t Stop Me Now","Queen"],
+    ["Hotel California","Eagles"],["Take It Easy","Eagles"],["Go Your Own Way","Fleetwood Mac"],["Dreams","Fleetwood Mac"],
+    ["Don’t Stop","Fleetwood Mac"],["Born to Run","Bruce Springsteen"],["Stairway to Heaven","Led Zeppelin"],["Immigrant Song","Led Zeppelin"],
+    ["Sweet Home Alabama","Lynyrd Skynyrd"],["Dream On","Aerosmith"],["Walk This Way","Aerosmith"],["More Than a Feeling","Boston"],
+    ["Hold the Line","Toto"],["Heart of Glass","Blondie"],["Call Me","Blondie"],["Rock and Roll All Nite","Kiss"],
+    ["Brick House","Commodores"],["Play That Funky Music","Wild Cherry"],["Car Wash","Rose Royce"],["Kung Fu Fighting","Carl Douglas"],
+    ["Get Down Tonight","KC and the Sunshine Band"],["That’s the Way (I Like It)","KC and the Sunshine Band"],["You’re So Vain","Carly Simon"],["Roxanne","The Police"],
+    // 1980s
+    ["Another One Bites the Dust","Queen"],["Under Pressure","Queen & David Bowie"],["Billie Jean","Michael Jackson"],["Beat It","Michael Jackson"],
+    ["Thriller","Michael Jackson"],["Smooth Criminal","Michael Jackson"],["Man in the Mirror","Michael Jackson"],["Rock with You","Michael Jackson"],
+    ["Don’t Stop ’Til You Get Enough","Michael Jackson"],["Like a Virgin","Madonna"],["Like a Prayer","Madonna"],["Material Girl","Madonna"],
+    ["Holiday","Madonna"],["When Doves Cry","Prince"],["Purple Rain","Prince"],["Kiss","Prince"],
+    ["1999","Prince"],["Let’s Go Crazy","Prince"],["Girls Just Want to Have Fun","Cyndi Lauper"],["Time After Time","Cyndi Lauper"],
+    ["Take On Me","a-ha"],["Sweet Dreams (Are Made of This)","Eurythmics"],["Every Breath You Take","The Police"],["Don’t Stop Believin’","Journey"],
+    ["Any Way You Want It","Journey"],["Africa","Toto"],["Livin’ on a Prayer","Bon Jovi"],["You Give Love a Bad Name","Bon Jovi"],
+    ["Eye of the Tiger","Survivor"],["Jump","Van Halen"],["Physical","Olivia Newton-John"],["Bette Davis Eyes","Kim Carnes"],
+    ["Celebration","Kool & the Gang"],["Total Eclipse of the Heart","Bonnie Tyler"],["Flashdance... What a Feeling","Irene Cara"],["Footloose","Kenny Loggins"],
+    ["Danger Zone","Kenny Loggins"],["Ghostbusters","Ray Parker Jr."],["Wake Me Up Before You Go-Go","Wham!"],["Careless Whisper","George Michael"],
+    ["Faith","George Michael"],["I Wanna Dance with Somebody (Who Loves Me)","Whitney Houston"],["How Will I Know","Whitney Houston"],["Greatest Love of All","Whitney Houston"],
+    ["We Are the World","USA for Africa"],["Don’t You (Forget About Me)","Simple Minds"],["Everybody Wants to Rule the World","Tears for Fears"],["Shout","Tears for Fears"],
+    ["Walk Like an Egyptian","The Bangles"],["Manic Monday","The Bangles"],["Never Gonna Give You Up","Rick Astley"],["Down Under","Men at Work"],
+    ["Hungry Like the Wolf","Duran Duran"],["Hurts So Good","John Mellencamp"],["Jessie’s Girl","Rick Springfield"],["Tainted Love","Soft Cell"],
+    ["Don’t You Want Me","The Human League"],["Come On Eileen","Dexys Midnight Runners"],["Born in the U.S.A.","Bruce Springsteen"],["Dancing in the Dark","Bruce Springsteen"],
+    ["Sweet Child O’ Mine","Guns N’ Roses"],["Welcome to the Jungle","Guns N’ Roses"],["Pour Some Sugar on Me","Def Leppard"],["I Love Rock ’n’ Roll","Joan Jett & the Blackhearts"],
+    ["Here I Go Again","Whitesnake"],["The Final Countdown","Europe"],["Push It","Salt-N-Pepa"],["It Takes Two","Rob Base and DJ E-Z Rock"],
+    ["Don’t Worry, Be Happy","Bobby McFerrin"],["Straight Up","Paula Abdul"],["Rhythm Nation","Janet Jackson"],["Nasty","Janet Jackson"],
+    ["Uptown Girl","Billy Joel"],["We Didn’t Start the Fire","Billy Joel"],["Karma Chameleon","Culture Club"],["All Night Long (All Night)","Lionel Richie"],
+    ["Hello","Lionel Richie"],["Say You, Say Me","Lionel Richie"],["Endless Love","Diana Ross & Lionel Richie"],["In the Air Tonight","Phil Collins"],
+    ["Addicted to Love","Robert Palmer"],
+    // 1990s
+    ["Vogue","Madonna"],["Ice Ice Baby","Vanilla Ice"],["U Can’t Touch This","MC Hammer"],["Smells Like Teen Spirit","Nirvana"],
+    ["Come as You Are","Nirvana"],["Black or White","Michael Jackson"],["Baby Got Back","Sir Mix-a-Lot"],["Jump","Kris Kross"],
+    ["I Will Always Love You","Whitney Houston"],["End of the Road","Boyz II Men"],["I’ll Make Love to You","Boyz II Men"],["Motownphilly","Boyz II Men"],
+    ["Gangsta’s Paradise","Coolio"],["Waterfalls","TLC"],["No Scrubs","TLC"],["Creep","Radiohead"],
+    ["Wonderwall","Oasis"],["Don’t Speak","No Doubt"],["Macarena","Los del Río"],["Wannabe","Spice Girls"],
+    ["MMMBop","Hanson"],["I Want It That Way","Backstreet Boys"],["Everybody (Backstreet’s Back)","Backstreet Boys"],["...Baby One More Time","Britney Spears"],
+    ["Genie in a Bottle","Christina Aguilera"],["Livin’ la Vida Loca","Ricky Martin"],["Smooth","Santana ft. Rob Thomas"],["My Heart Will Go On","Céline Dion"],
+    ["Fantasy","Mariah Carey"],["Vision of Love","Mariah Carey"],["Hero","Mariah Carey"],["Always Be My Baby","Mariah Carey"],
+    ["Kiss from a Rose","Seal"],["Losing My Religion","R.E.M."],["Under the Bridge","Red Hot Chili Peppers"],["Californication","Red Hot Chili Peppers"],
+    ["Enter Sandman","Metallica"],["Semi-Charmed Life","Third Eye Blind"],["Torn","Natalie Imbruglia"],["Ironic","Alanis Morissette"],
+    ["You Oughta Know","Alanis Morissette"],["Iris","Goo Goo Dolls"],["Basket Case","Green Day"],["Good Riddance (Time of Your Life)","Green Day"],
+    ["No Diggity","Blackstreet"],["Gettin’ Jiggy wit It","Will Smith"],["Men in Black","Will Smith"],["Mo Money Mo Problems","The Notorious B.I.G."],
+    ["Juicy","The Notorious B.I.G."],["California Love","2Pac ft. Dr. Dre"],["This Is How We Do It","Montell Jordan"],["Whoomp! (There It Is)","Tag Team"],
+    ["Rhythm Is a Dancer","Snap!"],["What Is Love","Haddaway"],["Blue (Da Ba Dee)","Eiffel 65"],["Barbie Girl","Aqua"],
+    ["All Star","Smash Mouth"],["Mambo No. 5","Lou Bega"],["Believe","Cher"],["Say My Name","Destiny’s Child"],
+    ["Bills, Bills, Bills","Destiny’s Child"],["Doo Wop (That Thing)","Lauryn Hill"],["Killing Me Softly","Fugees"],["Tubthumping","Chumbawamba"],
+    ["Bitter Sweet Symphony","The Verve"],["Zombie","The Cranberries"],["Linger","The Cranberries"],["Black Hole Sun","Soundgarden"],
+    ["Return of the Mack","Mark Morrison"],["Two Princes","Spin Doctors"],["Mr. Jones","Counting Crows"],["Jump Around","House of Pain"],
+    // 2000s
+    ["Bye Bye Bye","*NSYNC"],["It’s Gonna Be Me","*NSYNC"],["Oops!... I Did It Again","Britney Spears"],["Toxic","Britney Spears"],
+    ["Womanizer","Britney Spears"],["Crazy in Love","Beyoncé"],["Single Ladies (Put a Ring on It)","Beyoncé"],["Halo","Beyoncé"],
+    ["Irreplaceable","Beyoncé"],["Survivor","Destiny’s Child"],["Independent Women Part I","Destiny’s Child"],["Hey Ya!","OutKast"],
+    ["Ms. Jackson","OutKast"],["Lose Yourself","Eminem"],["The Real Slim Shady","Eminem"],["Without Me","Eminem"],
+    ["In Da Club","50 Cent"],["Hot in Herre","Nelly"],["Dilemma","Nelly ft. Kelly Rowland"],["Yeah!","Usher ft. Lil Jon & Ludacris"],
+    ["Burn","Usher"],["U Remind Me","Usher"],["Hollaback Girl","Gwen Stefani"],["Since U Been Gone","Kelly Clarkson"],
+    ["Because of You","Kelly Clarkson"],["Complicated","Avril Lavigne"],["Sk8er Boi","Avril Lavigne"],["Girlfriend","Avril Lavigne"],
+    ["Mr. Brightside","The Killers"],["Seven Nation Army","The White Stripes"],["Clocks","Coldplay"],["Viva la Vida","Coldplay"],
+    ["Yellow","Coldplay"],["Fix You","Coldplay"],["Feel Good Inc.","Gorillaz"],["Clint Eastwood","Gorillaz"],
+    ["Umbrella","Rihanna ft. Jay-Z"],["SOS","Rihanna"],["Don’t Stop the Music","Rihanna"],["Disturbia","Rihanna"],
+    ["Gold Digger","Kanye West ft. Jamie Foxx"],["Stronger","Kanye West"],["Heartless","Kanye West"],["Hips Don’t Lie","Shakira ft. Wyclef Jean"],
+    ["Whenever, Wherever","Shakira"],["Crazy","Gnarls Barkley"],["SexyBack","Justin Timberlake"],["Cry Me a River","Justin Timberlake"],
+    ["Rock Your Body","Justin Timberlake"],["Bad Day","Daniel Powter"],["Hey There Delilah","Plain White T’s"],["Apologize","Timbaland ft. OneRepublic"],
+    ["I Gotta Feeling","The Black Eyed Peas"],["Boom Boom Pow","The Black Eyed Peas"],["Where Is the Love?","The Black Eyed Peas"],["Poker Face","Lady Gaga"],
+    ["Just Dance","Lady Gaga ft. Colby O’Donis"],["Bad Romance","Lady Gaga"],["Paparazzi","Lady Gaga"],["Hot n Cold","Katy Perry"],
+    ["Low","Flo Rida ft. T-Pain"],["Party in the U.S.A.","Miley Cyrus"],["Love Story","Taylor Swift"],["You Belong with Me","Taylor Swift"],
+    ["Chasing Cars","Snow Patrol"],["How You Remind Me","Nickelback"],["Fallin’","Alicia Keys"],["No One","Alicia Keys"],
+    ["Empire State of Mind","Jay-Z & Alicia Keys"],["Beautiful Day","U2"],["Use Somebody","Kings of Leon"],["Bleeding Love","Leona Lewis"],
+    ["Rehab","Amy Winehouse"],["Valerie","Mark Ronson ft. Amy Winehouse"],["Mercy","Duffy"],["1, 2 Step","Ciara ft. Missy Elliott"],
+    ["Get Ur Freak On","Missy Elliott"],["Work It","Missy Elliott"],["Get the Party Started","P!nk"],["So What","P!nk"],
+    ["Unwritten","Natasha Bedingfield"],["Pocketful of Sunshine","Natasha Bedingfield"],["The Middle","Jimmy Eat World"],["All the Small Things","blink-182"],
+    ["American Idiot","Green Day"],["Boulevard of Broken Dreams","Green Day"],["Numb","Linkin Park"],["In the End","Linkin Park"],
+    ["Sugar, We’re Goin Down","Fall Out Boy"],["Welcome to the Black Parade","My Chemical Romance"],["Promiscuous","Nelly Furtado ft. Timbaland"],["Maneater","Nelly Furtado"],
+    ["Beautiful Girls","Sean Kingston"],["Replay","Iyaz"],["Kiss Me Thru the Phone","Soulja Boy ft. Sammie"],["Down","Jay Sean ft. Lil Wayne"],
+    // 2010s
+    ["Tik Tok","Kesha"],["Hey, Soul Sister","Train"],["Rolling in the Deep","Adele"],["Someone like You","Adele"],
+    ["Set Fire to the Rain","Adele"],["Hello","Adele"],["Somebody That I Used to Know","Gotye ft. Kimbra"],["Call Me Maybe","Carly Rae Jepsen"],
+    ["We Found Love","Rihanna ft. Calvin Harris"],["Diamonds","Rihanna"],["Party Rock Anthem","LMFAO"],["Moves like Jagger","Maroon 5 ft. Christina Aguilera"],
+    ["Payphone","Maroon 5"],["Sugar","Maroon 5"],["Girls Like You","Maroon 5 ft. Cardi B"],["Memories","Maroon 5"],
+    ["Pumped Up Kicks","Foster the People"],["Royals","Lorde"],["Radioactive","Imagine Dragons"],["Believer","Imagine Dragons"],
+    ["Thunder","Imagine Dragons"],["Demons","Imagine Dragons"],["Happy","Pharrell Williams"],["Get Lucky","Daft Punk ft. Pharrell Williams"],
+    ["Uptown Funk","Mark Ronson ft. Bruno Mars"],["Just the Way You Are","Bruno Mars"],["Locked Out of Heaven","Bruno Mars"],["Grenade","Bruno Mars"],
+    ["24K Magic","Bruno Mars"],["That’s What I Like","Bruno Mars"],["Shake It Off","Taylor Swift"],["Blank Space","Taylor Swift"],
+    ["Bad Blood","Taylor Swift"],["All About That Bass","Meghan Trainor"],["Thrift Shop","Macklemore & Ryan Lewis"],["Can’t Hold Us","Macklemore & Ryan Lewis"],
+    ["Gangnam Style","PSY"],["Roar","Katy Perry"],["Firework","Katy Perry"],["Dark Horse","Katy Perry"],
+    ["Teenage Dream","Katy Perry"],["Wrecking Ball","Miley Cyrus"],["Stay with Me","Sam Smith"],["Counting Stars","OneRepublic"],
+    ["Pompeii","Bastille"],["Riptide","Vance Joy"],["Ho Hey","The Lumineers"],["Little Talks","Of Monsters and Men"],
+    ["Some Nights","fun."],["We Are Young","fun. ft. Janelle Monáe"],["Rather Be","Clean Bandit ft. Jess Glynne"],["Cheerleader","OMI"],
+    ["Sorry","Justin Bieber"],["Love Yourself","Justin Bieber"],["Baby","Justin Bieber ft. Ludacris"],["Despacito","Luis Fonsi & Daddy Yankee ft. Justin Bieber"],
+    ["Shape of You","Ed Sheeran"],["Thinking Out Loud","Ed Sheeran"],["Perfect","Ed Sheeran"],["Hotline Bling","Drake"],
+    ["God’s Plan","Drake"],["One Dance","Drake ft. Wizkid & Kyla"],["Closer","The Chainsmokers ft. Halsey"],["Something Just like This","The Chainsmokers & Coldplay"],
+    ["Can’t Stop the Feeling!","Justin Timberlake"],["Cheap Thrills","Sia"],["Chandelier","Sia"],["Titanium","David Guetta ft. Sia"],
+    ["Wake Me Up","Avicii"],["Levels","Avicii"],["Lean On","Major Lazer & DJ Snake ft. MØ"],["Stressed Out","Twenty One Pilots"],
+    ["Heathens","Twenty One Pilots"],["Old Town Road","Lil Nas X ft. Billy Ray Cyrus"],["Bad Guy","Billie Eilish"],["Sunflower","Post Malone & Swae Lee"],
+    ["Circles","Post Malone"],["Congratulations","Post Malone"],["Havana","Camila Cabello ft. Young Thug"],["Señorita","Shawn Mendes & Camila Cabello"],
+    ["Stitches","Shawn Mendes"],["Shallow","Lady Gaga & Bradley Cooper"],["Humble.","Kendrick Lamar"],["Alright","Kendrick Lamar"],
+    ["Formation","Beyoncé"],["Love on Top","Beyoncé"],["Starboy","The Weeknd ft. Daft Punk"],["Can’t Feel My Face","The Weeknd"],
+    ["Truth Hurts","Lizzo"],["Good as Hell","Lizzo"],["7 Rings","Ariana Grande"],["Thank U, Next","Ariana Grande"],
+    ["Problem","Ariana Grande ft. Iggy Azalea"],["Fancy","Iggy Azalea ft. Charli XCX"],["Shut Up and Dance","Walk the Moon"],["Take Me to Church","Hozier"],
+    ["Timber","Pitbull ft. Kesha"],["Sweet but Psycho","Ava Max"],["High Hopes","Panic! at the Disco"],["Dance Monkey","Tones and I"],
+    ["Someone You Loved","Lewis Capaldi"],
+    // 2020s
+    ["Blinding Lights","The Weeknd"],["Save Your Tears","The Weeknd"],["Levitating","Dua Lipa"],["Don’t Start Now","Dua Lipa"],
+    ["Watermelon Sugar","Harry Styles"],["As It Was","Harry Styles"],["Dynamite","BTS"],["Butter","BTS"],
+    ["drivers license","Olivia Rodrigo"],["good 4 u","Olivia Rodrigo"],["vampire","Olivia Rodrigo"],["Stay","The Kid LAROI & Justin Bieber"],
+    ["Peaches","Justin Bieber ft. Daniel Caesar & Giveon"],["Heat Waves","Glass Animals"],["Montero (Call Me by Your Name)","Lil Nas X"],["Industry Baby","Lil Nas X & Jack Harlow"],
+    ["Easy on Me","Adele"],["Anti-Hero","Taylor Swift"],["Cruel Summer","Taylor Swift"],["Flowers","Miley Cyrus"],
+    ["Kill Bill","SZA"],["Unholy","Sam Smith & Kim Petras"],["Calm Down","Rema & Selena Gomez"],["Last Night","Morgan Wallen"],
+    ["Espresso","Sabrina Carpenter"],["Please Please Please","Sabrina Carpenter"],["Paint the Town Red","Doja Cat"],["Say So","Doja Cat"],
+    ["Kiss Me More","Doja Cat ft. SZA"],["Savage Love","Jawsh 685 & Jason Derulo"],["Mood","24kGoldn ft. Iann Dior"],["Leave the Door Open","Silk Sonic"],
+    ["Die with a Smile","Lady Gaga & Bruno Mars"],["APT.","ROSÉ & Bruno Mars"],["Birds of a Feather","Billie Eilish"],["Not Like Us","Kendrick Lamar"],
+    ["Lovin on Me","Jack Harlow"],["Texas Hold ’Em","Beyoncé"],["A Bar Song (Tipsy)","Shaboozey"],["Good Luck, Babe!","Chappell Roan"],
+    ["Pink Pony Club","Chappell Roan"],["Golden","HUNTR/X"],["Beautiful Things","Benson Boone"],["Lose Control","Teddy Swims"],
+    ["I Had Some Help","Post Malone ft. Morgan Wallen"],["Ordinary","Alex Warren"],["Shivers","Ed Sheeran"],["Bad Habits","Ed Sheeran"],
+    ["abcdefu","GAYLE"],["About Damn Time","Lizzo"],["Break My Soul","Beyoncé"],["Sunroof","Nicky Youre & dazy"],
+    ["Tití Me Preguntó","Bad Bunny"],["Dakiti","Bad Bunny & Jhay Cortez"],["The Box","Roddy Ricch"],["Running Up That Hill","Kate Bush"]
+  ];
+
+  const KEY = "micdup-songs";
+  let custom = [], mode = "all";
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && Array.isArray(saved.songs)) custom = saved.songs.filter(x => Array.isArray(x) && x[0]).map(x => [String(x[0]).slice(0, 80), String(x[1] || "").slice(0, 60)]);
+    if (saved && saved.mode === "mine" && custom.length) mode = "mine";
+  } catch (e) {}
+  function saveList() { try { localStorage.setItem(KEY, JSON.stringify({ songs: custom, mode })); } catch (e) {} }
+  let deck = [];
+  var song = null;
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [a[i], a[k]] = [a[k], a[i]]; }
+    return a;
+  }
+  function pool() { return (mode === "mine" && custom.length) ? custom : SONGS.concat(custom); }
+  function pickSong() {
+    if (!deck.length) deck = shuffle(pool().slice()).filter(s => s !== song);
+    if (!deck.length) deck = pool().slice();
+    song = deck.pop();
+    $("songTitle").textContent = song[0];
+    $("songArtist").textContent = song[1] || "";
+    $("spotify").href = "https://open.spotify.com/search/" + encodeURIComponent((song[0] + " " + (song[1] || "")).trim());
+    $("now").textContent = song[1] ? song[0] + " by " + song[1] : song[0];
+    resetClip();
+  }
+
+  /* ---------- Your songs ---------- */
+  function renderList() {
+    const ul = $("mylist");
+    ul.innerHTML = "";
+    if (!custom.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "No songs added yet. Songs you add join the random picks.";
+      ul.appendChild(li);
+    }
+    custom.forEach((s, i) => {
+      const li = document.createElement("li");
+      const t = document.createElement("span");
+      t.textContent = s[1] ? s[0] + " by " + s[1] : s[0];
+      const rm = document.createElement("button");
+      rm.className = "rm";
+      rm.textContent = "Remove";
+      rm.setAttribute("aria-label", "Remove " + s[0]);
+      rm.addEventListener("click", () => {
+        custom.splice(i, 1);
+        if (!custom.length) mode = "all";
+        deck = []; saveList(); renderList();
+      });
+      li.append(t, rm);
+      ul.appendChild(li);
+    });
+    $("modeAll").setAttribute("aria-checked", String(mode === "all"));
+    $("modeMine").setAttribute("aria-checked", String(mode === "mine"));
+    $("modeMine").disabled = !custom.length;
+  }
+  function addSong() {
+    const t = $("addTitle").value.trim(), a = $("addArtist").value.trim();
+    if (!t) { $("addTitle").focus(); return; }
+    custom.push([t.slice(0, 80), a.slice(0, 60)]);
+    $("addTitle").value = ""; $("addArtist").value = "";
+    $("addTitle").focus();
+    deck = []; saveList(); renderList();
+  }
+  $("addBtn").addEventListener("click", addSong);
+  ["addTitle", "addArtist"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") addSong(); }));
+  $("modeAll").addEventListener("click", () => { mode = "all"; deck = []; saveList(); renderList(); });
+  $("modeMine").addEventListener("click", () => { if (custom.length) { mode = "mine"; deck = []; saveList(); renderList(); } });
+  $("openList").addEventListener("click", () => { renderList(); show("list"); });
+  $("listBack").addEventListener("click", () => {
+    if (mode === "mine" && !custom.includes(song)) pickSong();
+    show("song");
+  });
+  $("reroll").addEventListener("click", pickSong);
+  $("toRecord").addEventListener("click", () => { renderStudio(); show("studio"); });
+
+  /* ---------- 10-second clip ---------- */
+  var clip = null, clipTimer = null, clipCache = {}, clipReq = 0, clipNoteId = "clipNote";
+  function clipKey(s) { return s[0] + "|" + (s[1] || ""); }
+  function setClipNote(text, link, source) {
+    const n = $(clipNoteId);
+    n.textContent = text || "";
+    if (link && /^https:\/\//.test(link)) {
+      const a = document.createElement("a");
+      a.href = link; a.target = "_blank"; a.rel = "noopener"; a.textContent = source || "Apple Music";
+      n.append(" ", a);
+    }
+  }
+  function stopClip() {
+    if (clip) { clip.pause(); clip = null; }
+    clearInterval(clipTimer); clipTimer = null;
+    document.querySelectorAll(".clipbtn").forEach(b => b.textContent = "Play 10 seconds");
+  }
+  function resetClip() {
+    clipReq++; stopClip();
+    ["clipNote", "clipNote2"].forEach(id => { const n = $(id); if (n) n.textContent = ""; });
+    if (song) findPreview(song).catch(() => {});   // load ahead so the tap plays right away
+  }
+  // Looks up a 30-second preview, trying several sources so one blocked or down service doesn't stop clips.
+  function jsonp(url, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      const cb = "micdupCb" + Date.now() + Math.floor(Math.random() * 1e6);
+      const sc = document.createElement("script");
+      let t;
+      const done = (v, err) => { delete window[cb]; sc.remove(); clearTimeout(t); err ? reject(err) : resolve(v); };
+      t = setTimeout(() => done(null, new Error("network")), timeoutMs || 7000);
+      window[cb] = data => done(data);
+      sc.onerror = () => done(null, new Error("network"));
+      sc.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+      document.head.appendChild(sc);
+    });
+  }
+  function pickItunes(data) {
+    const r = ((data && data.results) || []).find(x => x && x.previewUrl && /^https:\/\//.test(x.previewUrl));
+    return r ? { url: r.previewUrl, link: r.trackViewUrl, source: "Apple Music" } : null;
+  }
+  function pickDeezer(data) {
+    const r = ((data && data.data) || []).find(x => x && x.preview && /^https:\/\//.test(x.preview));
+    return r ? { url: r.preview, link: r.link, source: "Deezer" } : null;
+  }
+  async function findPreview(s) {
+    const k = clipKey(s);
+    if (clipCache[k]) return clipCache[k];
+    const term = encodeURIComponent((s[0] + " " + (s[1] || "")).trim());
+    const itunes = "https://itunes.apple.com/search?media=music&entity=song&limit=5&country=US&term=" + term;
+    const deezer = "https://api.deezer.com/search?limit=5&output=jsonp&q=" + term;
+    const tries = [
+      async () => {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 7000);
+        try { const r = await fetch(itunes, { signal: ctrl.signal }); if (!r.ok) throw new Error("network"); return pickItunes(await r.json()); }
+        finally { clearTimeout(t); }
+      },
+      async () => pickItunes(await jsonp(itunes)),
+      async () => pickDeezer(await jsonp(deezer))
+    ];
+    let reached = false;
+    for (const attempt of tries) {
+      try {
+        const v = await attempt();
+        reached = true;
+        if (v) { clipCache[k] = v; return v; }
+      } catch (e) { /* try the next source */ }
+    }
+    throw new Error(reached ? "none" : "network");
+  }
+  async function playClip(b, noteId) {
+    if (clip) { stopClip(); return; }
+    ["clipNote", "clipNote2"].forEach(id => { const n = $(id); if (n) n.textContent = ""; });
+    clipNoteId = noteId;
+    const req = ++clipReq, s = song;
+    b.textContent = "Loading…"; setClipNote("");
+    let p;
+    try { p = await findPreview(s); }
+    catch (e) {
+      if (req !== clipReq) return;
+      b.textContent = "Play 10 seconds";
+      setClipNote(e.message === "none"
+        ? "No clip found for this song. Use Open in Spotify to hear it."
+        : "Couldn’t load a clip right now. Check your connection and try again, or use Open in Spotify.");
+      return;
+    }
+    if (req !== clipReq) return;
+    clip = new Audio(p.url);
+    let left = 10;
+    b.textContent = "Stop";
+    setClipNote("Clip from", p.link, p.source);
+    clip.addEventListener("playing", () => {
+      if (clipTimer) return;
+      b.textContent = "Stop (" + left + ")";
+      clipTimer = setInterval(() => {
+        left--;
+        if (left <= 0) stopClip(); else b.textContent = "Stop (" + left + ")";
+      }, 1000);
+    });
+    clip.onended = stopClip;
+    clip.play().catch(() => { stopClip(); setClipNote("Tap Play 10 seconds again to start the clip."); });
+  }
+  $("clipBtn").addEventListener("click", e => playClip(e.currentTarget, "clipNote"));
+  $("bgToggle").addEventListener("click", e => {
+    if (recSlot !== -1) return;
+    bgClip = !bgClip;
+    e.currentTarget.setAttribute("aria-pressed", String(bgClip));
+    e.currentTarget.textContent = "Clip while recording: " + (bgClip ? "On" : "Off");
+    $("bgHint").textContent = bgClip ? "Wear headphones so the clip doesn’t end up in your recording." : "";
+  });
+  $("clipBtn2").addEventListener("click", e => {
+    if (recSlot !== -1) return;
+    playClip(e.currentTarget, "clipNote2");
+  });
+
+  /* ---------- Studio ---------- */
+  function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+  function renderStudio() {
+    const tabs = $("tabs");
+    tabs.innerHTML = "";
+    teams.forEach((t, i) => {
+      const b = document.createElement("button");
+      b.textContent = t.name;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", i === current ? "true" : "false");
+      b.addEventListener("click", () => {
+        if (recSlot !== -1) return;
+        stopAllAudio(); current = i; renderStudio();
+      });
+      tabs.appendChild(b);
+    });
+
+    const grid = $("grid");
+    grid.innerHTML = "";
+    const slots = teams[current].slots;
+    LAYERS.forEach((layer, j) => {
+      const s = slots[j];
+      const el = document.createElement("div");
+      el.className = "slot";
+      const isRec = recSlot === j;
+      el.innerHTML =
+        '<h3>' + layer + '</h3>' +
+        '<button class="rec' + (isRec ? ' on' : '') + '" aria-label="' + (isRec ? 'Cancel recording ' : 'Record ') + layer + '"><span class="ring"></span><span class="dot"></span></button>' +
+        '<div class="status">' + (isRec ? (recPhase === 'rec' ? 'Recording' : 'Get ready') : s ? fmt(s.secs) : 'Empty') + '</div>' +
+        '<div class="row">' +
+          '<button class="play"' + (s ? '' : ' disabled') + '>Play</button>' +
+          '<button class="clear"' + (s ? '' : ' disabled') + '>Clear</button>' +
+        '</div>';
+      const rec = el.querySelector(".rec");
+      rec.addEventListener("click", () => {
+        if (recSlot === j) stopRecording();
+        else if (recSlot === -1) startRecording(j);
+      });
+      rec.disabled = recSlot !== -1 && recSlot !== j;
+      el.querySelector(".play").addEventListener("click", e => togglePlay([j], e.currentTarget));
+      el.querySelector(".clear").addEventListener("click", () => {
+        stopAllAudio();
+        URL.revokeObjectURL(slots[j].url); slots[j] = null; renderStudio();
+      });
+      if (recSlot !== -1) el.querySelectorAll(".row button").forEach(b => b.disabled = true);
+      grid.appendChild(el);
+    });
+
+    const filled = slots.filter(Boolean).length;
+    $("playAll").disabled = filled === 0 || recSlot !== -1;
+    $("playAll").textContent = "Play all layers";
+    $("mixNote").textContent = filled === 0 ? "Record a layer to play the mix"
+      : filled + " of 4 layers recorded";
+  }
+
+  function showErr(msg) { const e = $("err"); e.textContent = msg; e.style.display = msg ? "block" : "none"; }
+
+  const REC_SECS = 10, COUNT_IN = 3;
+  var bgClip = true, recPhase = null, discard = false, countTimer = null, bgAudio = null;
+
+  function setStatus(j, t) {
+    const st = $("grid").children[j]?.querySelector(".status");
+    if (st) st.textContent = t;
+  }
+
+  async function startRecording(j) {
+    stopAllAudio();
+    showErr("");
+    $("clipNote2").textContent = "";
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      showErr("This browser can’t record audio. Try a recent version of Chrome, Safari or Firefox.");
+      return;
+    }
+    // Start the clip muted during the tap, so phones allow it to play with the recording later.
+    bgAudio = null;
+    const cached = song && clipCache[clipKey(song)];
+    if (bgClip && cached) {
+      const a = new Audio(cached.url);
+      a.muted = true;
+      bgAudio = a;
+      a.play().then(() => { if (bgAudio === a && recPhase !== "rec") { a.pause(); a.currentTime = 0; } }).catch(() => {});
+    } else if (bgClip) {
+      $("clipNote2").textContent = "The clip isn’t loaded, so this layer records without it.";
+    }
+    try {
+      if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      bgAudio = null;
+      showErr("Microphone access is blocked. Allow the microphone in your browser settings, then tap record again.");
+      return;
+    }
+    recSlot = j; recPhase = "count"; discard = false;
+    let n = COUNT_IN;
+    renderStudio();
+    setStatus(j, "Starting in " + n);
+    countTimer = setInterval(() => {
+      n--;
+      if (n > 0) setStatus(j, "Starting in " + n);
+      else { clearInterval(countTimer); countTimer = null; beginTake(j); }
+    }, 1000);
+  }
+
+  function beginTake(j) {
+    chunks = [];
+    recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const team = teams[current];
+    recorder.onstop = () => {
+      if (bgAudio) { bgAudio.pause(); bgAudio = null; }
+      if (!discard) {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        if (team.slots[j]) URL.revokeObjectURL(team.slots[j].url);
+        team.slots[j] = { url: URL.createObjectURL(blob), secs: Math.min(REC_SECS, (Date.now() - recStart) / 1000) };
+      }
+      recSlot = -1; recPhase = null;
+      renderStudio();
+    };
+    recPhase = "rec";
+    recorder.start();
+    if (bgAudio) { bgAudio.currentTime = 0; bgAudio.muted = false; bgAudio.play().catch(() => {}); }
+    recStart = Date.now();
+    renderStudio();
+    startMeter();
+    const tick = () => {
+      const left = Math.max(1, Math.ceil(REC_SECS - (Date.now() - recStart) / 1000));
+      setStatus(j, left + (left === 1 ? " second" : " seconds") + " left");
+    };
+    tick();
+    timer = setInterval(() => {
+      if (Date.now() - recStart >= REC_SECS * 1000) finishRecording(); else tick();
+    }, 100);
+  }
+
+  function finishRecording() {
+    clearInterval(timer); timer = null; cancelAnimationFrame(raf);
+    if (recorder && recorder.state === "recording") recorder.stop();
+  }
+
+  // Tapping during the count-in or the recording cancels it; partial takes are not kept.
+  function stopRecording() {
+    if (recSlot === -1) return;
+    const counting = recPhase === "count";
+    clearInterval(countTimer); countTimer = null;
+    discard = true;
+    if (bgAudio) { bgAudio.pause(); bgAudio = null; }
+    if (counting) { recSlot = -1; recPhase = null; renderStudio(); }
+    else finishRecording();
+    showErr("Recording canceled. Each layer needs the full 10 seconds, so keep going until it stops on its own.");
+  }
+
+  function startMeter() {
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+        audioCtx.createMediaStreamSource(stream).connect(analyser);
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) { return; }
+    const data = new Uint8Array(analyser.fftSize);
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i] - 128));
+      const ring = document.querySelector(".rec.on .ring");
+      if (ring && !reduce) ring.style.transform = "scale(" + (1 + Math.min(peak / 128, 1) * 0.6) + ")";
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
+  /* ---------- Playback ---------- */
+  function stopAllAudio() {
+    stopClip();
+    playing.forEach(a => { a.pause(); a.currentTime = 0; });
+    playing = [];
+    document.querySelectorAll(".play").forEach(b => b.textContent = "Play");
+    if ($("playAll")) $("playAll").textContent = "Play all layers";
+  }
+
+  function togglePlay(indexes, btn) {
+    const wasPlaying = btn.dataset.on === "1";
+    stopAllAudio();
+    document.querySelectorAll("[data-on]").forEach(b => b.dataset.on = "");
+    if (wasPlaying) return;
+    const slots = teams[current].slots;
+    const list = indexes.map(i => slots[i]).filter(Boolean);
+    if (!list.length) return;
+    let left = list.length;
+    btn.dataset.on = "1";
+    btn.textContent = "Stop";
+    playing = list.map(s => {
+      const a = new Audio(s.url);
+      a.onended = () => { if (--left === 0) { btn.dataset.on = ""; stopAllAudio(); } };
+      return a;
+    });
+    playing.forEach(a => a.play().catch(() => {}));
+  }
+
+  $("playAll").addEventListener("click", e => togglePlay([0, 1, 2, 3], e.currentTarget));
+})();
+</script>
+</body>
+</html>
